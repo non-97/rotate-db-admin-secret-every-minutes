@@ -144,7 +144,6 @@ export class RdsStack extends cdk.Stack {
           cdk.aws_secretsmanager.SecretRotationApplication
             .MYSQL_ROTATION_SINGLE_USER,
         secret: dbAdminSecret,
-        automaticallyAfter: cdk.Duration.days(1),
         target: dbInstance,
         vpc,
         excludeCharacters: dbAdminSecret.excludeCharacters,
@@ -153,5 +152,12 @@ export class RdsStack extends cdk.Stack {
         }),
       }
     );
+
+    const cfnDbAdminSecretRotationSchedule = dbAdminSecret.node.tryFindChild(
+      "RotationSchedule"
+    )?.node.defaultChild as cdk.aws_secretsmanager.CfnRotationSchedule;
+    cfnDbAdminSecretRotationSchedule.rotationRules = {
+      scheduleExpression: "cron(0 /4 * * ? *)",
+    };
   }
 }

@@ -124,7 +124,6 @@ export class RdsStack extends cdk.Stack {
         multiAz: false,
         publiclyAccessible: false,
         storageEncrypted: true,
-        storageType: cdk.aws_rds.StorageType.GP2,
         subnetGroup,
         securityGroups: [dbSG],
       }

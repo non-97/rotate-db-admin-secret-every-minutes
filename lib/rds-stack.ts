@@ -158,5 +158,50 @@ export class RdsStack extends cdk.Stack {
     cfnDbAdminSecretRotationSchedule.rotationRules = {
       scheduleExpression: "cron(0 /4 * * ? *)",
     };
+
+    // EventBridge Scheduler IAM Role
+    const schedulerIamRole = new cdk.aws_iam.Role(this, "Scheduler IAM Role", {
+      assumedBy: new cdk.aws_iam.ServicePrincipal("scheduler.amazonaws.com"),
+      managedPolicies: [
+        new cdk.aws_iam.ManagedPolicy(
+          this,
+          "Rotate DB Admin Secret IAM Policy",
+          {
+            statements: [
+              new cdk.aws_iam.PolicyStatement({
+                effect: cdk.aws_iam.Effect.ALLOW,
+                actions: ["secretsmanager:RotateSecret"],
+                resources: [dbAdminSecret.secretArn],
+              }),
+            ],
+          }
+        ),
+      ],
+    });
+
+    // EventBridge Scheduler
+    new cdk.aws_scheduler.CfnSchedule(
+      this,
+      "Rotate DB Admin Secret Every Minutes",
+      {
+        flexibleTimeWindow: {
+          mode: "OFF",
+        },
+        scheduleExpression: "cron(* * * * ? *)",
+        target: {
+          arn: "arn:aws:scheduler:::aws-sdk:secretsmanager:rotateSecret",
+          roleArn: schedulerIamRole.roleArn,
+          input: `{ "SecretId": "${dbAdminSecret.secretArn}" }`,
+          retryPolicy: {
+            maximumEventAgeInSeconds: 60,
+            maximumRetryAttempts: 0,
+          },
+        },
+        description: "Rotate DB Admin Secret Every Minutes",
+        name: "rotate-db-admin-secret-every-minutes",
+        scheduleExpressionTimezone: "Asia/Tokyo",
+        state: "ENABLED",
+      }
+    );
   }
 }

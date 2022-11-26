@@ -5,16 +5,6 @@ export class RdsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // SSM IAM Role
-    const ssmIamRole = new cdk.aws_iam.Role(this, "SSM IAM Role", {
-      assumedBy: new cdk.aws_iam.ServicePrincipal("ec2.amazonaws.com"),
-      managedPolicies: [
-        cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName(
-          "AmazonSSMManagedInstanceCore"
-        ),
-      ],
-    });
-
     // VPC
     const vpc = new cdk.aws_ec2.Vpc(this, "VPC", {
       ipAddresses: cdk.aws_ec2.IpAddresses.cidr("10.0.1.0/24"),
@@ -53,28 +43,6 @@ export class RdsStack extends cdk.Stack {
       cdk.aws_ec2.Peer.ipv4(vpc.vpcCidrBlock),
       cdk.aws_ec2.Port.tcp(3306)
     );
-
-    // EC2 Instance
-    new cdk.aws_ec2.Instance(this, "EC2 Instance", {
-      instanceType: new cdk.aws_ec2.InstanceType("t3.micro"),
-      machineImage: cdk.aws_ec2.MachineImage.latestAmazonLinux({
-        generation: cdk.aws_ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
-      }),
-      vpc,
-      blockDevices: [
-        {
-          deviceName: "/dev/xvda",
-          volume: cdk.aws_ec2.BlockDeviceVolume.ebs(8, {
-            volumeType: cdk.aws_ec2.EbsDeviceVolumeType.GP3,
-          }),
-        },
-      ],
-      propagateTagsToVolumeOnCreation: true,
-      vpcSubnets: vpc.selectSubnets({
-        subnetType: cdk.aws_ec2.SubnetType.PUBLIC,
-      }),
-      role: ssmIamRole,
-    });
 
     // RDS Subnet Group
     const subnetGroup = new cdk.aws_rds.SubnetGroup(this, "RDS Subnet Group", {
